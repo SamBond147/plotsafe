@@ -41,9 +41,7 @@
         }
 
         header { text-align: center; margin-bottom: 32px; }
-
         header h1 { font-size: 24px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
-
         header p { color: var(--text-muted); font-size: 15px; }
 
         .drop-zone {
@@ -71,9 +69,7 @@
         }
 
         .drop-zone:hover svg, .drop-zone.dragover svg { fill: var(--primary); }
-
         .drop-zone strong { display: block; font-size: 16px; margin-bottom: 4px; }
-
         .drop-zone span { color: var(--text-muted); font-size: 14px; }
 
         #status-container { margin-top: 24px; }
@@ -144,7 +140,134 @@
     const fileInput = document.getElementById('file-input');
     const status = document.getElementById('status');
 
-    const XSLT_FILE_NAME = 'PlotSafeToFMA.xsl';
+    // The XSLT is now embedded directly in the script
+    const xsltString = `<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet version="1.0" 
+    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+    xmlns:fma="http://fma.mpi.govt.nz/FMAInformation/Schema/01/06/2016/FMAInformation.xsd">
+    <xsl:output method="xml" indent="yes" encoding="UTF-8"/>
+    <xsl:template match="/">
+        <xsl:element name="ForestInfo" namespace="http://fma.mpi.govt.nz/FMAInformation/Schema/01/06/2016/FMAInformation.xsd">
+            <fma:participantSchemeType><xsl:value-of select="//property[domain_name='Scheme']/property_value"/></fma:participantSchemeType>
+            <fma:participantName><xsl:value-of select="//property[domain_name='Client']/property_value"/></fma:participantName>
+            <fma:participantNzeurNumber>0</fma:participantNzeurNumber>
+            <fma:SubmitterName><xsl:value-of select="//property[domain_name='RepName']/property_value"/></fma:SubmitterName>
+            <fma:DatePlotsAllocated>2012-01-04</fma:DatePlotsAllocated>
+            <fma:FmaInfoSuppliedFor>All plots</fma:FmaInfoSuppliedFor>
+            <fma:FmaInfoType>Plot</fma:fma:FmaInfoType>
+            <fma:SamplePlotList>
+                <xsl:for-each select="//stratum/plots/plot">
+                    <fma:SPInfo>
+                        <fma:PlotID><xsl:value-of select="../../stratum_name"/></fma:PlotID>
+                        <fma:PlotArea>
+                            <xsl:choose>
+                                <xsl:when test="plot_type_name='0.03ha'">0.030</xsl:when>
+                                <xsl:when test="plot_type_name='0.04ha'">0.040</xsl:when>
+                                <xsl:when test="plot_type_name='0.06ha'">0.060</xsl:when>
+                                <xsl:otherwise>0.100</xsl:otherwise>
+                            </xsl:choose>
+                        </fma:PlotArea>
+                        <fma:PlotShape>Circular</fma:PlotShape>
+                        <fma:PlotAverageMaxSlope><xsl:value-of select="plot_slope"/></fma:PlotAverageMaxSlope>
+                        <xsl:choose>
+                            <xsl:when test="plot_type_name='0.03ha'">
+                                <fma:PlotRadius>9.77</fma:PlotRadius>
+                                <fma:PlotSlopeAdjRadius>9.77</fma:PlotSlopeAdjRadius>
+                            </xsl:when>
+                            <xsl:when test="plot_type_name='0.04ha'">
+                                <fma:PlotRadius>11.28</fma:PlotRadius>
+                                <fma:PlotSlopeAdjRadius>11.28</fma:PlotSlopeAdjRadius>
+                            </xsl:when>
+                            <xsl:when test="plot_type_name='0.06ha'">
+                                <fma:PlotRadius>13.82</fma:PlotRadius>
+                                <fma:PlotSlopeAdjRadius>13.82</fma:PlotSlopeAdjRadius>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <fma:PlotRadius>17.84</fma:PlotRadius>
+                                <fma:PlotSlopeAdjRadius>17.84</fma:PlotSlopeAdjRadius>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                        <fma:PositionNavigatedToEasting><xsl:value-of select="../../properties/property[domain_name='NavGPSE']/property_value"/></fma:PositionNavigatedToEasting>
+                        <fma:PositionNavigatedToNorthing><xsl:value-of select="../../properties/property[domain_name='NavGPSN']/property_value"/></fma:PositionNavigatedToNorthing>
+                        <fma:PlotCentrePointEasting><xsl:value-of select="../../properties/property[domain_name='GPSE']/property_value"/></fma:PlotCentrePointEasting>
+                        <fma:PlotCentrePointNorthing><xsl:value-of select="../../properties/property[domain_name='GPSN']/property_value"/></fma:PlotCentrePointNorthing>
+                        <fma:PlotCentrePointAltitude><xsl:value-of select="../../properties/property[domain_name='Altitude']/property_value"/></fma:PlotCentrePointAltitude>
+                        <fma:PlotExtendsBeyondBdry>No</fma:PlotExtendsBeyondBdry>
+                        <fma:PlotCentrePointRelocated>
+                            <xsl:choose>
+                                <xsl:when test="../../properties/property[domain_name='PlotRelocated']/property_value='NO'">No</xsl:when>
+                                <xsl:otherwise>Yes</xsl:otherwise>
+                            </xsl:choose>
+                        </fma:PlotCentrePointRelocated>
+                        <fma:PlotCentrePointReestablished>No</fma:PlotCentrePointReestablished>
+                        <fma:DateFmaInfoCollectionStarted><xsl:value-of select="measurement_date"/></fma:DateFmaInfoCollectionStarted>
+                        <fma:TreeInfo>
+                            <xsl:choose>
+                                <xsl:when test="trees/tree">
+                                    <fma:TreesPresent>Yes</fma:TreesPresent>
+                                    <fma:IntermingledTreesPresent>
+                                        <xsl:choose>
+                                            <xsl:when test="properties/property[domain_name='Intermingled']/property_value='YES'">Yes</xsl:when>
+                                            <xsl:otherwise>No</xsl:otherwise>
+                                        </xsl:choose>
+                                    </fma:IntermingledTreesPresent>
+                                    <fma:PlantedTreesPresent>Yes</fma:PlantedTreesPresent>
+                                    <fma:PlantedStocking><xsl:value-of select="properties/property[domain_name='PlantedSPH']/property_value"/></fma:PlantedStocking>
+                                    <fma:PlantingYear><xsl:value-of select="properties/property[domain_name='YearEst']/property_value"/></fma:PlantingYear>
+                                    <fma:TreeStemList>
+                                        <fma:MeasuredStemsList>
+                                            <xsl:for-each select="trees/tree">
+                                                <fma:StemInfo>
+                                                    <fma:StemID><xsl:value-of select="position()"/></fma:StemID>
+                                                    <fma:StemEstablishmentType>Planted</fma:StemEstablishmentType>
+                                                    <fma:StemState>
+                                                        <xsl:choose>
+                                                            <xsl:when test="is_dead='True'">Dead</xsl:when>
+                                                            <xsl:otherwise>Live</xsl:otherwise>
+                                                        </xsl:choose>
+                                                    </fma:StemState>
+                                                    <fma:StemSpecies>PSMEN</fma:StemSpecies>
+                                                    <fma:StemDiameter><xsl:value-of select="stems/stem/stem_diameters/stem_diameter/dob"/></fma:StemDiameter>
+                                                    <fma:StemDiameterType>DBH</fma:StemDiameterType>
+                                                    <fma:StemDiameterAtStdHeight>Yes</fma:StemDiameterAtStdHeight>
+                                                    <xsl:if test="stems/stem/stem_height">
+                                                        <fma:StemHeight><xsl:value-of select="stems/stem/stem_height"/></fma:StemHeight>
+                                                    </xsl:if>
+                                                    <fma:StemBrokenTop>
+                                                        <xsl:choose>
+                                                            <xsl:when test="stems/stem/stem_height_status='BROKEN'">Yes</xsl:when>
+                                                            <xsl:otherwise>No</xsl:otherwise>
+                                                        </xsl:choose>
+                                                    </fma:StemBrokenTop>
+                                                </fma:StemInfo>
+                                            </xsl:for-each>
+                                        </fma:MeasuredStemsList>
+                                    </fma:TreeStemList>
+                                </xsl:when>
+                                <xsl:otherwise>
+                                    <fma:TreesPresent>No</fma:TreesPresent>
+                                    <fma:TreesAbsentReason>Trees below stem diameter or height thresholds</fma:TreesAbsentReason>
+                                    <fma:TreesAbsentAssignedSpeciesGroup>SGRAD</fma:TreesAbsentAssignedSpeciesGroup>
+                                    <fma:TreeStemList>
+                                        <fma:EstimatedStemsList>
+                                            <fma:SGInfo>
+                                                <fma:SpeciesGroupOfCollarDiameterStems>SGRAD</fma:SpeciesGroupOfCollarDiameterStems>
+                                                <fma:EstabTypeOfCollarDiameterStems>Planted</fma:EstabTypeOfCollarDiameterStems>
+                                                <fma:AverageCollarDiameterOfStems>10</fma:AverageCollarDiameterOfStems>
+                                                <fma:AverageHeightOfCollarDiameterStems>0.5</fma:AverageHeightOfCollarDiameterStems>
+                                                <fma:StockingOfCollarDiameterStems>20</fma:StockingOfCollarDiameterStems>
+                                            </fma:SGInfo>
+                                        </fma:EstimatedStemsList>
+                                    </fma:TreeStemList>
+                                </xsl:otherwise>
+                            </xsl:choose>
+                        </fma:TreeInfo>
+                    </fma:SPInfo>
+                </xsl:for-each>
+            </fma:SamplePlotList>
+        </xsl:element>
+    </xsl:template>
+</xsl:stylesheet>`;
 
     // UI Events
     dropZone.addEventListener('click', () => fileInput.click());
@@ -167,7 +290,7 @@
     });
 
     async function handleFile(file) {
-        if (file.type !== "text/xml" && !file.name.endsWith('.xml')) {
+        if (!file.name.toLowerCase().endsWith('.xml')) {
             updateStatus('❌ Please upload a valid XML file.', 'error');
             return;
         }
@@ -175,36 +298,33 @@
         updateStatus('Converting data...', 'info', true);
 
         try {
-            // 1. Fetch the external XSLT file
-            const xsltResponse = await fetch(XSLT_FILE_NAME);
-            if (!xsltResponse.ok) throw new Error(`Could not load ${XSLT_FILE_NAME}. Ensure it is in the same folder.`);
-            const xsltText = await xsltResponse.text();
-
-            // 2. Read the user file
             const xmlText = await file.text();
-            
             const parser = new DOMParser();
+            
             const sourceXml = parser.parseFromString(xmlText, "application/xml");
-            const stylesheet = parser.parseFromString(xsltText, "application/xml");
+            const stylesheet = parser.parseFromString(xsltString, "application/xml");
 
-            if (sourceXml.getElementsByTagName("parsererror").length) throw new Error("The XML file provided is malformed.");
+            if (sourceXml.getElementsByTagName("parsererror").length) {
+                throw new Error("The XML file provided is malformed or invalid.");
+            }
 
-            // 3. Transformation logic
+            // Transformation engine
             const processor = new XSLTProcessor();
             processor.importStylesheet(stylesheet);
             const resultDoc = processor.transformToDocument(sourceXml);
 
-            if (!resultDoc) throw new Error("Transformation failed. Check XSLT logic.");
+            if (!resultDoc) {
+                throw new Error("Transformation failed. Check if the XML matches the PlotSafe structure.");
+            }
 
-            // 4. Serialize and Prepare Download
+            // Serialize and trigger download
             const serializer = new XMLSerializer();
             const outputXml = '<?xml version="1.0" encoding="UTF-8"?>\n' + serializer.serializeToString(resultDoc);
             
             const blob = new Blob([outputXml], { type: 'text/xml' });
             const url = URL.createObjectURL(blob);
-            const downloadName = file.name.replace('.xml', '_converted.xml');
+            const downloadName = file.name.replace(/\.[^/.]+$/, "") + "_fma_converted.xml";
 
-            // Trigger Download
             const link = document.createElement('a');
             link.href = url;
             link.download = downloadName;
